@@ -13,10 +13,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 const upstreamDNS = "10.10.10.1:53"
 var filterDomainAAAA = []string{ "youtube.com.", "googlevideo.com." }
+
+var totalQueries = 0
+var timeStarted time.Time
 
 func serve(net string) {
 	server := &dns.Server{Addr: ":53", Net: net, TsigSecret: nil}
@@ -51,6 +55,9 @@ func filterAAAA(w dns.ResponseWriter, r *dns.Msg) {
 }
 
 func main() {
+	// init update
+	timeStarted = time.Now()
+
 	// handler for filtering ipv6 AAAA records
 	for _, domain := range filterDomainAAAA {
 		dns.HandleFunc(domain, filterAAAA)
@@ -67,7 +74,9 @@ func main() {
 forever:
 	for s := range sig {
 		if s == syscall.SIGUSR1 {
+			fmt.Printf("Uptime %s, %d queries performed, send SIGUSR2 for details\n", time.Since(timeStarted).String(), totalQueries)
 		} else {
+			fmt.Printf("Uptime %s, %d queries performed, send SIGUSR2 for details\n", time.Since(timeStarted).String(), totalQueries)
 			fmt.Printf("\nSignal (%d) received, stopping\n", s)
 			break forever
 		}
