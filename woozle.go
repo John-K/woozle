@@ -63,11 +63,11 @@ func main() {
 
 	// handle signals
 	sig := make(chan os.Signal)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
 forever:
-	for {
-		select {
-		case s := <-sig:
+	for s := range sig {
+		if s == syscall.SIGUSR1 {
+		} else {
 			fmt.Printf("\nSignal (%d) received, stopping\n", s)
 			break forever
 		}
