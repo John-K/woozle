@@ -16,11 +16,21 @@ import (
 	"time"
 )
 
+// ================================================
+// Configurables - TODO: move to CLI arg processing
+// ================================================
 const upstreamDNS = "10.10.10.1:53"
 var filterDomainAAAA = []string{ "youtube.com.", "googlevideo.com." }
 
+// ================================================
+// Globals for tracking stats and caching
+// ================================================
 var totalQueries = 0
 var timeStarted time.Time
+
+// ================================================
+// Helper functions
+// ================================================
 
 func serve(net string) {
 	server := &dns.Server{Addr: ":53", Net: net, TsigSecret: nil}
@@ -31,8 +41,15 @@ func serve(net string) {
 	}
 }
 
+
+// ================================================
+// Meat and potatoes
+// ================================================
+
 func handleRecurse(w dns.ResponseWriter, m *dns.Msg) {
 	fmt.Printf("Recursing for %s %s\n", m.Question[0].Name, dns.TypeToString[m.Question[0].Qtype])
+
+	// pass the query on to the upstream DNS server
 	c := new(dns.Client)
 	r, _, e := c.Exchange(m, upstreamDNS)
 	if e != nil {
@@ -65,7 +82,9 @@ func main() {
 
 	// default handler
 	dns.HandleFunc(".", handleRecurse)
-//	go serve("tcp")
+
+	// start server(s)
+	//go serve("tcp")
 	go serve("udp")
 
 	// handle signals
