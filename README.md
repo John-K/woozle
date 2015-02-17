@@ -10,6 +10,6 @@ go get github.com/John-K/woozle
  * Add commandline argument support
    * specifying upstream DNS servers 
    * specifying hosts to filter AAAA queries
- * Add support for keeping statistics and dumping to stderr on SIGINFO
+ * ~~Add support for keeping statistics and dumping to stderr on SIGINFO~~
  * Add support for filtering other types of DNS queries - which ones?
  * Better error handling
