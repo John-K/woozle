@@ -133,6 +133,7 @@ func handleStats(queryChan <-chan DNSQuery) {
 func main() {
 	// init update
 	timeStarted = time.Now()
+	lastSigInt := timeStarted.Add(time.Second * -31)
 
 	// setup and kickoff stats collection
 	statPipe = make(chan DNSQuery, 10)
@@ -152,17 +153,17 @@ func main() {
 
 	// handle signals
 	sig := make(chan os.Signal)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 forever:
 	for s := range sig {
-		if s == syscall.SIGUSR1 {
-			fmt.Printf("Uptime %s, %d queries performed, send SIGUSR2 for details\n", time.Since(timeStarted).String(), totalQueries)
-		} else if s == syscall.SIGUSR2 {
-			dispStats()
-		} else {
-			fmt.Printf("Uptime %s, %d queries performed, send SIGUSR2 for details\n", time.Since(timeStarted).String(), totalQueries)
+		fmt.Printf("\nUptime %s, %d queries performed", time.Since(timeStarted).String(), totalQueries)
+		if time.Since(lastSigInt).Seconds() < 30 {
 			fmt.Printf("\nSignal (%d) received, stopping\n", s)
 			break forever
+		} else {
+			fmt.Printf(", send SIGINT again within 30s to quit\n")
+			lastSigInt = time.Now();
+			dispStats()
 		}
 	}
 }
