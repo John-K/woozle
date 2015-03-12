@@ -91,7 +91,7 @@ func handleRecurse(w dns.ResponseWriter, m *dns.Msg) {
 	c := new(dns.Client)
 	r, _, e := c.Exchange(m, upstreamDNS)
 	if e != nil {
-		fmt.Printf("Client query failed: %s\n", e.Error())
+		fmt.Printf("%s Client query failed: %s\n", time.Now().Format("01/02 15:04"), e.Error())
 	} else {
 		w.WriteMsg(r)
 	}
