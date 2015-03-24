@@ -91,10 +91,15 @@ func handleRecurse(w dns.ResponseWriter, m *dns.Msg) {
 	c := new(dns.Client)
 	r, _, e := c.Exchange(m, upstreamDNS)
 	if e != nil {
-		fmt.Printf("%s Client query failed: %s\n", time.Now().Format("01/02 15:04"), e.Error())
-	} else {
-		w.WriteMsg(r)
+		fmt.Printf("%s retrying query for '%s'\n", time.Now().Format("01/02 15:04"), m.Question[0].Name);
+		time.Sleep(time.Millisecond * 10);
+		r, _, e = c.Exchange(m, upstreamDNS)
+		if e != nil {
+			fmt.Printf("%s Client query failed for '%s': %s\n", time.Now().Format("01/02 15:04"), m.Question[0].Name, e.Error())
+			return
+		}
 	}
+	w.WriteMsg(r)
 }
 
 func filterAAAA(w dns.ResponseWriter, r *dns.Msg) {
