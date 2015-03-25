@@ -12,6 +12,7 @@ import (
 	"github.com/miekg/dns"
 	"os"
 	"os/signal"
+	"sort"
 	"syscall"
 	"strings"
 	"time"
@@ -41,6 +42,32 @@ type DomainStats struct {
 
 var statPipe chan DNSQuery
 var stats = map[string]*DomainStats{}
+type PStats *DomainStats
+type ByFreq []*DomainStats
+var sortedStats = make(ByFreq, 100)[0:0]
+func (s ByFreq) Len() int {
+	return len(s)
+}
+func (s ByFreq) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s ByFreq) Less(i, j int) bool {
+//	fmt.Printf("len: %d. %i > %j\n", len(s), i, j)
+	return s[i].frequency > s[j].frequency
+}
+func (s ByFreq) Append(stats *DomainStats) ByFreq {
+	l := len(s)
+//	fmt.Printf("len: %d, cap %d\n", l, cap(s))
+	if l + 1 > cap(s) {
+		newSlice := make(ByFreq, l*2)
+		copy(newSlice, s)
+		s = newSlice
+	}
+	s = s[0:l+1]
+	s[l] = stats
+
+	return s
+}
 var totalQueries = 0
 var timeStarted time.Time
 
@@ -70,10 +97,15 @@ func getRootFromDomain(domain string) string {
 func dispStats() {
 	fmt.Printf("\nQuery Statistics:\n")
 
-	for d, s := range stats {
-		fmt.Printf("%25s: %3d queries", d, s.frequency)
-		if s.filtered > 0 {
-			fmt.Printf(", %3d dropped", s.filtered)
+	// print up to top 10 domains
+	l := len(sortedStats)
+	if l > 10 {
+		l = 10
+	}
+	for i := 0; i < l; i++ {
+		fmt.Printf("%25s: %3d queries", sortedStats[i].domain, sortedStats[i].frequency)
+		if sortedStats[i].filtered > 0 {
+			fmt.Printf(", %3d dropped", sortedStats[i].filtered)
 		}
 		fmt.Println()
 	}
@@ -124,12 +156,16 @@ func handleStats(queryChan <-chan DNSQuery) {
 		if nil == stats[domain] {
 			stats[domain] = &DomainStats{domain:domain}
 			stats[domain].queries = make(map[string]int)
+			sortedStats = sortedStats.Append(stats[domain])
 		}
 		stats[domain].frequency++
 		if query.filtered {
 			stats[domain].filtered++
 		}
 		stats[domain].queries[query.queryType] += 1
+		if stats[domain].frequency > 1 {
+			sort.Sort(sortedStats)
+		}
 		//fmt.Printf("%s type %s (%d, %d)\n", query.domain, query.queryType, stats[query.domain].frequency, stats[query.domain].queries[query.queryType])
 	}
 	fmt.Printf("stats engine stopping\n");
